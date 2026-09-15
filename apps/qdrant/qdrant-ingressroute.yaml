@@ -1,0 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: qdrant
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`qdrant.homelab.local`)
+      kind: Rule
+      services:
+        - name: qdrant
+          port: 6333
