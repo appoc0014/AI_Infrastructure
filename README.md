@@ -139,6 +139,10 @@ After the RAG service's HPA scaled it to 4 replicas under load, it kept flapping
 - **Qdrant as a StatefulSet, everything else as a Deployment.** Qdrant is the one component in this stack that needs persistent, stable identity; using the correct Kubernetes primitive for the one workload that actually needs it (rather than defaulting to Deployment everywhere) matters.
 - **The embedding model runs on CPU, deliberately.** It shares the box with an already VRAM-constrained vLLM instance; embedding models are cheap enough on CPU that this isn't a real tradeoff.
 
+## Secret Management
+
+Kubernetes Secrets are opaque, not encrypted — anything referencing one in a Helm values file (like a Grafana admin password) risks landing in Git as plaintext the moment that file gets committed, which is exactly what happened early in this project. Fixed by introducing **Sealed Secrets** (Bitnami): the real credential is encrypted client-side with `kubeseal` against the in-cluster controller's public key, producing a `SealedSecret` that's genuinely safe to commit — only the controller's private key, which never leaves the cluster, can decrypt it back into a real Secret. Grafana now reads its admin credentials via `existingSecret`, and the values file itself no longer contains anything sensitive.
+
 ## Roadmap
 
 - **LiteLLM gateway** — route requests between the local vLLM instance and a hosted API when local GPU capacity is saturated. This is the real answer to "how do you scale a single-GPU inference service," instead of a horizontal autoscaler that would never trigger.
@@ -159,3 +163,4 @@ curl http://rag.homelab.local/query \
   -H "Content-Type: application/json" \
   -d '{"question": "Your question here"}'
 ```
+
